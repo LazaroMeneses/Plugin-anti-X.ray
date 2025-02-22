@@ -1,0 +1,58 @@
+package me.tuplugin.antixray;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.HashMap;
+import java.util.UUID;
+
+public class AntiXRayPlugin extends JavaPlugin implements Listener {
+
+    private final HashMap<UUID, Integer> miningSuspicion = new HashMap<>();
+    private final int maxSuspiciousFinds = 5;
+    private final long suspicionResetTime = 300000; // 5 minutos
+
+    @Override
+    public void onEnable() {
+        getServer().getPluginManager().registerEvents(this, this);
+        getLogger().info("Anti-XRay Plugin activado.");
+    }
+
+    @Override
+    public void onDisable() {
+        getLogger().info("Anti-XRay Plugin desactivado.");
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        player.setResourcePack("URL_DEL_PAQUETE_DE_RECURSOS");
+    }
+
+    @EventHandler
+    public void onBlockBreak(BlockBreakEvent event) {
+        Player player = event.getPlayer();
+        Material blockType = event.getBlock().getType();
+        
+        if (blockType == Material.DIAMOND_ORE || blockType == Material.DEEPSLATE_DIAMOND_ORE) {
+            UUID playerId = player.getUniqueId();
+            miningSuspicion.put(playerId, miningSuspicion.getOrDefault(playerId, 0) + 1);
+            
+
+            if (miningSuspicion.get(playerId) >= maxSuspiciousFinds) {
+                Bukkit.getOnlinePlayers().stream()
+                        .filter(admin -> admin.hasPermission("antixray.alert"))
+                        .forEach(admin -> admin.sendMessage("§c[Anti-XRay] " + player.getName() + " podría estar usando X-Ray!"));
+                
+                player.sendMessage("§e[Anti-XRay] Se ha detectado actividad sospechosa. ¡Ten cuidado!");
+                miningSuspicion.put(playerId, 0);
+            }
+        }
+    }
+}
